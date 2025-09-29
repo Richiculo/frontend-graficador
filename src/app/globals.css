@@ -1,26 +1,226 @@
 @import "tailwindcss";
+/* Animaciones (instala: npm i -D tailwindcss-animate) */
+@plugin "tailwindcss-animate";
 
+/* ================= TOKENS (con color y buen contraste) ================= */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Neutros fríos claros */
+  --background: oklch(0.970 0.015 250);
+  --foreground: oklch(0.20  0.020 250);
+
+  --card: oklch(0.990 0.010 250);
+  --card-foreground: var(--foreground);
+
+  --popover: var(--card);
+  --popover-foreground: var(--foreground);
+
+  /* Acento azul/índigo */
+  --primary: oklch(0.62 0.21 270);           /* índigo 600 aprox */
+  --primary-foreground: oklch(0.99 0.010 250);
+
+  --secondary: oklch(0.955 0.015 250);       /* surface secundaria */
+  --secondary-foreground: oklch(0.24 0.020 250); /* más oscuro = legible */
+
+  --accent: oklch(0.96 0.030 230);           /* azul suave */
+  --accent-foreground: oklch(0.22 0.025 240);
+
+  --muted: oklch(0.96 0.010 250);
+  --muted-foreground: oklch(0.45 0.020 255); /* ↑↑ MÁS OSCURO para mejor contraste */
+
+  --destructive: oklch(0.62 0.20 25);
+  --destructive-foreground: oklch(0.98 0.010 250);
+
+  --border: oklch(0.88 0.015 250);           /* un poco más marcado */
+  --input: var(--border);
+  --ring: oklch(0.70 0.12 270);              /* foco índigo */
+
+  /* Charts (varios tonos distinguibles) */
+  --chart-1: oklch(0.64 0.22 41);
+  --chart-2: oklch(0.60 0.12 184);
+  --chart-3: oklch(0.51 0.24 270);
+  --chart-4: oklch(0.76 0.20 110);
+  --chart-5: oklch(0.71 0.19 20);
+
+  --radius: 0.625rem;
+
+  /* Sidebar */
+  --sidebar: oklch(0.985 0.012 250);
+  --sidebar-foreground: var(--foreground);
+  --sidebar-primary: var(--primary);
+  --sidebar-primary-foreground: var(--primary-foreground);
+  --sidebar-accent: oklch(0.96 0.020 245);
+  --sidebar-accent-foreground: oklch(0.24 0.022 245);
+  --sidebar-border: var(--border);
+  --sidebar-ring: var(--ring);
 }
 
+.dark {
+  /* Neutros fríos oscuros */
+  --background: oklch(0.16 0.020 250);
+  --foreground: oklch(0.98 0.010 250);
+
+  --card: oklch(0.18 0.018 250);
+  --card-foreground: var(--foreground);
+
+  --popover: var(--card);
+  --popover-foreground: var(--foreground);
+
+  /* Acento algo más brillante en dark */
+  --primary: oklch(0.72 0.18 270);
+  --primary-foreground: oklch(0.11 0.020 255);
+
+  --secondary: oklch(0.22 0.012 250); /* FIX: era un valor muy raro */
+  --secondary-foreground: oklch(0.94 0.010 250); /* claro sobre fondo oscuro */
+
+  --accent: oklch(0.28 0.025 240);
+  --accent-foreground: var(--foreground);
+
+  --muted: oklch(0.24 0.010 250);
+  --muted-foreground: oklch(0.65 0.015 250);     /* ↑↑ MÁS CLARO para mejor contraste */
+
+  --destructive: oklch(0.60 0.22 25);
+  --destructive-foreground: oklch(0.18 0.020 250);
+
+  --border: oklch(0.28 0.012 250);
+  --input: var(--border);
+  --ring: oklch(0.62 0.16 270);
+
+  --chart-1: oklch(0.62 0.24 264);
+  --chart-2: oklch(0.69 0.17 162);
+  --chart-3: oklch(0.77 0.19 70);
+  --chart-4: oklch(0.64 0.26 304);
+  --chart-5: oklch(0.65 0.24 16);
+
+  --sidebar: oklch(0.20 0.015 250);
+  --sidebar-foreground: var(--foreground);
+  --sidebar-primary: var(--primary);
+  --sidebar-primary-foreground: var(--primary-foreground);
+  --sidebar-accent: oklch(0.24 0.020 245);
+  --sidebar-accent-foreground: var(--foreground);
+  --sidebar-border: var(--border);
+  --sidebar-ring: var(--ring);
+}
+
+/* ================= MAPEO A TOKENS DE TAILWIND ================= */
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+/* ================= BASE (COMPLETAMENTE REESCRITO) ================= */
+@layer base {
+  * { @apply border-border; }
+  
+  body { 
+    @apply bg-background text-foreground; 
+    /* Fuerza el color de texto base */
+    color: var(--color-foreground) !important;
+  }
+
+  /* REMOVER TODAS las reglas que sobreescriben colores automáticamente */
+  /* NO más: p, small, label { color: var(--color-muted-foreground); } */
+
+  /* Inputs con colores correctos */
+  input, textarea, select {
+    background-color: var(--color-card) !important;
+    color: var(--color-foreground) !important;
+    border-color: var(--color-input);
+  }
+  
+  input::placeholder, textarea::placeholder {
+    color: var(--color-muted-foreground) !important;
+    opacity: 0.8;
+  }
+  
+  /* Labels y texto legible por defecto */
+  label {
+    color: var(--color-foreground) !important;
+  }
+  
+  /* Buttons con colores correctos */
+  button {
+    color: inherit;
+  }
+  
+  /* Links visibles */
+  a {
+    color: var(--color-primary);
+  }
+  
+  a:hover {
+    color: var(--color-primary);
+    opacity: 0.8;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+/* ================= Accesibilidad / detalles ================= */
+:where(button, a, input, textarea, [role="button"]) { outline: none; }
+:where(button, a, input, textarea, [role="button"]):focus-visible {
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.8);
+}
+
+*::-webkit-scrollbar { height: 10px; width: 10px; }
+*::-webkit-scrollbar-thumb { background: #2a2a2a; border-radius: 8px; }
+*::-webkit-scrollbar-thumb:hover { background: #3a3a3a; }
+
+/* Efectos utilitarios */
+.glass {
+  backdrop-filter: blur(12px);
+  background: rgba(0, 0, 0, 0.10);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+.card-hover { transition: all 0.3s ease; }
+.card-hover:hover { transform: translateY(-2px); box-shadow: 0 10px 25px rgba(0, 0, 0, 0.20); }
+
+/* Animación básica */
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+.animate-fade-in { animation: fadeIn 0.3s ease-out; }
+
+/* ================= OVERRIDES ESPECÍFICOS PARA DEBUGGING ================= */
+/* Fuerza colores correctos en caso de que algo los esté sobreescribiendo */
+.debug-text {
+  color: var(--color-foreground) !important;
+}
+
+/* Utilities para usar cuando necesites */
+.text-visible {
+  color: var(--color-foreground) !important;
+}
+
+.text-secondary {
+  color: var(--color-muted-foreground) !important;
 }
