@@ -5,24 +5,30 @@ import type React from "react"
 import { api } from "@/lib/api"
 import { useAuth } from "@/store/auth"
 import { useRouter } from "next/navigation"
-import { Eye, EyeOff, Loader2, Mail, Lock, ArrowRight, UserPlus } from "lucide-react"
+import { Eye, EyeOff, Loader2, Mail, Lock, User, ArrowRight, ArrowLeft } from "lucide-react"
 import Link from "next/link"
 
-export default function LoginPage() {
+export default function RegisterPage() {
+  const [username, setUsername] = useState("")
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
+  const [confirmPassword, setConfirmPassword] = useState("")
   const [showPassword, setShowPassword] = useState(false)
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const setAuth = useAuth((s) => s.setAuth)
   const router = useRouter()
 
   const canSubmit = useMemo(() => {
-    if (!email || !password) return false
+    if (!username || !email || !password || !confirmPassword) return false
     // validación rápida de email
-    const ok = /.+@.+\..+/.test(email)
-    return ok && password.length >= 6
-  }, [email, password])
+    const emailOk = /.+@.+\..+/.test(email)
+    const passwordOk = password.length >= 6
+    const passwordsMatch = password === confirmPassword
+    const usernameOk = username.length >= 3
+    return emailOk && passwordOk && passwordsMatch && usernameOk
+  }, [username, email, password, confirmPassword])
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -30,18 +36,24 @@ export default function LoginPage() {
     setError(null)
     setLoading(true)
     try {
-      const { data } = await api.post("/auth/login", { email, password })
-      const token = data.access_token ?? data.token
+      const { data } = await api.post("/auth/register", { 
+        username, 
+        email, 
+        password 
+      })
+      const token = data.token
       if (!token) throw new Error("No se recibió token")
       setAuth(token, data.user)
       router.replace("/projects")
     } catch (err: any) {
-      const msg = err?.response?.data?.message || err?.message || "Error de autenticación"
+      const msg = err?.response?.data?.message || err?.message || "Error al registrarse"
       setError(Array.isArray(msg) ? msg.join(", ") : msg)
     } finally {
       setLoading(false)
     }
   }
+
+  const passwordsMatch = password === confirmPassword
 
   return (
     <main className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5 flex items-center justify-center p-4">
@@ -64,10 +76,34 @@ export default function LoginPage() {
                 <div className="w-6 h-6 bg-primary rounded-md" />
               </div>
               <h1 className="text-3xl font-bold text-balance">
-                Bienvenido a <span className="text-primary">Graficador</span>
+                Únete a <span className="text-primary">Graficador</span>
               </h1>
-              <p className="text-muted-foreground text-balance">Accede para continuar con tus proyectos</p>
+              <p className="text-muted-foreground text-balance">Crea tu cuenta para comenzar a diagramar</p>
             </header>
+
+            <div className="space-y-2">
+              <label htmlFor="username" className="text-sm font-medium text-foreground">
+                Nombre de usuario
+              </label>
+              <div className="relative">
+                <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <input
+                  id="username"
+                  name="username"
+                  type="text"
+                  autoComplete="username"
+                  required
+                  minLength={3}
+                  className="w-full pl-10 pr-4 py-3 bg-input border border-border rounded-xl text-foreground placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all duration-200"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  placeholder="Tu nombre de usuario"
+                />
+              </div>
+              {username.length > 0 && username.length < 3 && (
+                <p className="text-xs text-destructive">El nombre de usuario debe tener al menos 3 caracteres</p>
+              )}
+            </div>
 
             <div className="space-y-2">
               <label htmlFor="email" className="text-sm font-medium text-foreground">
@@ -99,7 +135,7 @@ export default function LoginPage() {
                   id="password"
                   name="password"
                   type={showPassword ? "text" : "password"}
-                  autoComplete="current-password"
+                  autoComplete="new-password"
                   required
                   minLength={6}
                   className="w-full pl-10 pr-12 py-3 bg-input border border-border rounded-xl text-foreground placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all duration-200"
@@ -116,6 +152,45 @@ export default function LoginPage() {
                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
               </div>
+              {password.length > 0 && password.length < 6 && (
+                <p className="text-xs text-destructive">La contraseña debe tener al menos 6 caracteres</p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <label htmlFor="confirmPassword" className="text-sm font-medium text-foreground">
+                Confirmar contraseña
+              </label>
+              <div className="relative">
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <input
+                  id="confirmPassword"
+                  name="confirmPassword"
+                  type={showConfirmPassword ? "text" : "password"}
+                  autoComplete="new-password"
+                  required
+                  minLength={6}
+                  className={`w-full pl-10 pr-12 py-3 bg-input border rounded-xl text-foreground placeholder:text-muted-foreground focus:ring-2 focus:ring-primary/20 transition-all duration-200 ${
+                    confirmPassword.length > 0 && !passwordsMatch 
+                      ? "border-destructive focus:border-destructive" 
+                      : "border-border focus:border-primary"
+                  }`}
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  placeholder="••••••••"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmPassword((v) => !v)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-muted-foreground hover:text-foreground transition-colors duration-200 rounded-md hover:bg-accent"
+                  aria-label={showConfirmPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+                >
+                  {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
+              {confirmPassword.length > 0 && !passwordsMatch && (
+                <p className="text-xs text-destructive">Las contraseñas no coinciden</p>
+              )}
             </div>
 
             {error && (
@@ -136,11 +211,11 @@ export default function LoginPage() {
                 {loading ? (
                   <>
                     <Loader2 className="h-4 w-4 animate-spin" />
-                    <span>Ingresando...</span>
+                    <span>Creando cuenta...</span>
                   </>
                 ) : (
                   <>
-                    <span>Iniciar sesión</span>
+                    <span>Crear cuenta</span>
                     <ArrowRight className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-1" />
                   </>
                 )}
@@ -149,25 +224,16 @@ export default function LoginPage() {
               <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
             </button>
 
-            <div className="text-center pt-4 border-t border-border/50 space-y-3">
+            <div className="text-center pt-4 border-t border-border/50">
               <p className="text-sm text-muted-foreground">
-                ¿No tienes una cuenta?{" "}
+                ¿Ya tienes una cuenta?{" "}
                 <Link
-                  href="/register"
+                  href="/login"
                   className="text-primary hover:text-primary/80 font-medium transition-colors duration-200 inline-flex items-center gap-1"
                 >
-                  <UserPlus className="h-3 w-3" />
-                  Crear cuenta
+                  <ArrowLeft className="h-3 w-3" />
+                  Iniciar sesión
                 </Link>
-              </p>
-              <p className="text-sm text-muted-foreground">
-                ¿Problemas para acceder?{" "}
-                <button
-                  type="button"
-                  className="text-primary hover:text-primary/80 font-medium transition-colors duration-200"
-                >
-                  Contacta soporte
-                </button>
               </p>
             </div>
           </form>

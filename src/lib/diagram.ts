@@ -165,8 +165,8 @@ export async function createRelation(diagramId: number | string, body: {
   targetClassId: number
   sourceMult: string
   targetMult: string
-  sourceRole?: string
-  targetRole?: string
+  sourceRole?: string | null
+  targetRole?: string | null
   navigableAToB?: boolean
   navigableBToA?: boolean
 }) {

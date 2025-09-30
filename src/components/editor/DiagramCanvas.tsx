@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useParams } from "next/navigation";
-
 import { useEditor } from "@/store/editor";
 import { moveClass, createRelation, deleteClass, deleteRelation } from "@/lib/diagram";
 
@@ -15,6 +14,7 @@ import ClassCard from "./canvas/ClassCard";
 import { usePanZoom } from "./canvas/hooks/usePanZoom";
 import { useShortcuts } from "./canvas/hooks/useShortcuts";
 import { GRID_SIZE, CLASS_WIDTH, CLASS_HEIGHT } from "./canvas/constants";
+import { useDiagramSSE } from "@/hooks/useDiagramSSE"; // ⬅️ HOOK SSE
 
 type SizeMap = Record<number, { width: number; height: number }>;
 
@@ -43,6 +43,9 @@ export default function DiagramCanvas() {
     setSelectedRelation,
   } = useEditor();
 
+  // ⬇️ Conecta SSE (presencia + cambios en vivo)
+  const { presence } = useDiagramSSE(diagramIdNum);
+
   const [snap, setSnap] = useState(true);
   const [drag, setDrag] = useState<{ id: number; ox: number; oy: number } | null>(null);
   const [edgeMenu, setEdgeMenu] = useState<{ id: number; x: number; y: number } | null>(null);
@@ -64,14 +67,13 @@ export default function DiagramCanvas() {
     transformStyle,
   } = usePanZoom();
 
-  // Defaults por tipo (lo que se envía al crear)
-  // Nota: herencia/implementación → multiplicidad vacía "" (no null) para no romper el backend.
+  // Defaults por tipo
   const DEFAULT_MULTS: Record<string, { src: string; tgt: string }> = {
-    ASSOCIATION:     { src: "1", tgt: "0..*" },
-    AGGREGATION:     { src: "1", tgt: "0..*" },
-    COMPOSITION:     { src: "1..*", tgt: "1" },
-    INHERITANCE:     { src: "",  tgt: ""     },
-    IMPLEMENTATION:  { src: "",  tgt: ""     },
+    ASSOCIATION: { src: "1", tgt: "0..*" },
+    AGGREGATION: { src: "1", tgt: "0..*" },
+    COMPOSITION: { src: "1..*", tgt: "1" },
+    INHERITANCE: { src: "", tgt: "" },
+    IMPLEMENTATION: { src: "", tgt: "" },
   };
   const FALLBACK = { src: "1", tgt: "0..*" };
 
@@ -96,8 +98,12 @@ export default function DiagramCanvas() {
 
   // barra espaciadora para pan
   useEffect(() => {
-    const down = (e: KeyboardEvent) => { if (e.key === " ") setSpaceDown(true); };
-    const up = (e: KeyboardEvent) => { if (e.key === " ") setSpaceDown(false); };
+    const down = (e: KeyboardEvent) => {
+      if (e.key === " ") setSpaceDown(true);
+    };
+    const up = (e: KeyboardEvent) => {
+      if (e.key === " ") setSpaceDown(false);
+    };
     window.addEventListener("keydown", down);
     window.addEventListener("keyup", up);
     return () => {
@@ -106,7 +112,7 @@ export default function DiagramCanvas() {
     };
   }, [setSpaceDown]);
 
-  // eventos canvas
+  // eventos canvas (borrar clase / abrir menú relación / toggle modo)
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -175,33 +181,27 @@ export default function DiagramCanvas() {
           const def = DEFAULT_MULTS[kindKey] ?? FALLBACK;
 
           const rel = await createRelation(diagramIdNum, {
-            kind: (relationKind as any) ?? "ASSOCIATION",
+            kind: relationKind as any,
             sourceClassId: relationSource!,
             targetClassId: id,
-            // IMPORTANTE: nunca null -> backend los tiene NOT NULL
             sourceMult: def.src,
             targetMult: def.tgt,
+            // usa undefined o cambia tipos a string|null en lib/diagram.ts
+            sourceRole: undefined,
+            targetRole: undefined,
             navigableAToB: true,
             navigableBToA: false,
-            sourceRole: null,
-            targetRole: null,
           });
-          let srcMult = (rel as any).sourceMult ?? def.src ?? "";
-          let tgtMult = (rel as any).targetMult ?? def.tgt ?? "";
-          if ((rel.kind ?? relationKind) === "COMPOSITION") {
-            tgtMult = "1";
-            srcMult = "1..*";
-          }
 
           addEdge({
             id: (rel as any).id,
-            kind: rel.kind ?? relationKind,
+            kind: (rel as any).kind ?? relationKind,
             sourceClassId: relationSource!,
             targetClassId: id,
             sourceMult: (rel as any).sourceMult ?? def.src ?? "",
             targetMult: (rel as any).targetMult ?? def.tgt ?? "",
-            sourceRole: rel.sourceRole ?? null,
-            targetRole: rel.targetRole ?? null,
+            sourceRole: (rel as any).sourceRole ?? null,
+            targetRole: (rel as any).targetRole ?? null,
           });
         } catch {
           // noop
@@ -232,6 +232,7 @@ export default function DiagramCanvas() {
       if (n) {
         try {
           await moveClass(n.id, n.x, n.y);
+          // el SSE de backend terminará consolidando (class.moved)
         } catch {}
       }
     }
@@ -249,6 +250,7 @@ export default function DiagramCanvas() {
       removeEdgeLocal(edgeId);
       setEdgeMenu(null);
       setSelectedRelation(null);
+      // el SSE de backend emitirá relation.deleted para el resto
     } catch (e) {
       console.error("No se pudo eliminar la relación", e);
     }
@@ -269,8 +271,24 @@ export default function DiagramCanvas() {
     [nodes, sizeMap, attrMap, methodMap]
   );
 
+  // nombres compactos para UI
+  const presCompact = useMemo(() => {
+    const list = (presence ?? []).map((u) => u.name || u.email);
+    if (list.length <= 1) return list;
+    const [first, ...rest] = list;
+    return [`${first}`, `+${rest.length}`];
+  }, [presence]);
+
   return (
     <div ref={canvasRef} className="relative h-screen w-full bg-background overflow-hidden" data-canvas-root>
+      {/* Chip compacto en appbar (arriba derecha) */}
+      <div className="absolute right-6 top-6 z-30">
+        <div className="flex items-center gap-2 rounded-full bg-card/70 border border-border px-3 py-1 backdrop-blur transition-opacity">
+          <span className="inline-block size-2 rounded-full bg-emerald-500" />
+          <span className="text-sm text-foreground">{presCompact.join(" · ") || "Solo tú"}</span>
+        </div>
+      </div>
+
       <Toolbar
         relationMode={relationMode}
         relationSource={relationSource}
@@ -285,6 +303,26 @@ export default function DiagramCanvas() {
         relationKind={relationKind}
         setRelationKind={setRelationKind}
       />
+
+      {/* Panel flotante de presencia con animación suave */}
+      <div className="absolute right-6 top-20 z-20">
+        <div className="rounded-2xl bg-card/70 border border-border shadow-sm backdrop-blur px-4 py-3
+                        transition-all duration-200 ease-out
+                        data-[show=true]:opacity-100 data-[show=true]:translate-y-0
+                        data-[show=false]:opacity-0 data-[show=false]:-translate-y-2"
+             data-show={(presence?.length ?? 0) > 0}>
+          <p className="text-xs text-muted-foreground mb-1">Colaborando ahora</p>
+          <ul className="space-y-1">
+            {(presence ?? []).map((u) => (
+              <li key={u.id} className="flex items-center gap-2 text-sm">
+                <span className="inline-block size-2 rounded-full bg-emerald-500" />
+                <span className="text-foreground">{u.name || u.email}</span>
+                <span className="text-muted-foreground text-xs">está editando</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </div>
 
       {relationMode && (
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-20 glass rounded-2xl px-6 py-4">

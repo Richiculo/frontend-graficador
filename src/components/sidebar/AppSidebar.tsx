@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useParams, useSearchParams } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useEditor } from "@/store/editor";
 import {
   createClass,
@@ -33,8 +33,13 @@ import {
   Box,
   FenceIcon as Function,
   Type,
+  UserPlus2,
+  UserCheck,
 } from "lucide-react";
-import RelationEditor from "@/components/editor/RelationEditor"; // ⬅️ nuevo
+import RelationEditor from "@/components/editor/RelationEditor";
+import InviteDialog from "@/components/colab/InviteDialog";
+import { useAuth } from "@/store/auth";
+import { usePresence } from "@/store/presence";
 
 function uniqueName(base: string, existing: string[]) {
   let n = 1;
@@ -47,6 +52,9 @@ export default function AppSidebar() {
   const { diagramId } = useParams<{ diagramId: string }>();
   const search = useSearchParams();
   const projectId = search.get("projectId");
+
+  const { user, token } = useAuth(); // 👈 tomamos user y jwt
+  const { upsert, users } = usePresence();
 
   const {
     nodes,
@@ -66,10 +74,36 @@ export default function AppSidebar() {
     addMethodLocal,
     updateMethodLocal,
     removeMethodLocal,
-    selectedRelationId, // ⬅️ del store
+    selectedRelationId,
   } = useEditor();
 
+  // Registrar al usuario actual en la presencia (como "viewing")
+  useEffect(() => {
+    if (!user) return;
+    const username =
+      (user as any).username ||
+      ((user as any).email ? (user as any).email.split("@")[0] : "Yo");
+    upsert({
+      id: Number((user as any).id),
+      username,
+      state: "viewing",
+      lastSeen: Date.now(),
+    });
+  }, [user, upsert]);
+
   const [msg, setMsg] = useState<string | null>(null);
+
+  // --- Invitar colaboradores ---
+  const [inviteOpen, setInviteOpen] = useState(false);
+  const apiUrl = useMemo(
+    () => process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000",
+    []
+  );
+  const diagramIdNum = useMemo(
+    () => (diagramId ? Number(diagramId) : NaN),
+    [diagramId]
+  );
+
   const existingNames = useMemo(() => nodes.map((n) => n.name), [nodes]);
 
   async function onAddClass() {
@@ -213,6 +247,12 @@ export default function AppSidebar() {
     }
   }
 
+  // Lista ordenada de usuarios (para mostrar en la UI)
+  const presenceList = useMemo(() => {
+    const arr = Object.values(users || {});
+    return arr.sort((a: any, b: any) => b.lastSeen - a.lastSeen).slice(0, 8);
+  }, [users]);
+
   return (
     <aside className="w-80 shrink-0 border-r border-border bg-sidebar h-screen overflow-y-auto">
       <div className="p-6 border-b border-sidebar-border">
@@ -236,6 +276,55 @@ export default function AppSidebar() {
       </div>
 
       <div className="p-6 space-y-6">
+
+        {/* === Indicador de colaboración / presencia === */}
+        <div>
+          <div className="text-xs uppercase tracking-wide text-muted-foreground mb-2 flex items-center gap-2">
+            <UserCheck className="size-4" /> Colaboradores
+          </div>
+
+          {presenceList.length === 0 ? (
+            <div className="text-xs text-muted-foreground">Solo tú por aquí.</div>
+          ) : (
+            <div className="flex flex-col gap-2">
+              {presenceList.map((u: any) => {
+                const color =
+                  u.state === "editing"
+                    ? "bg-emerald-500"
+                    : u.state === "viewing"
+                    ? "bg-blue-500"
+                    : "bg-gray-400";
+                const label =
+                  u.state === "editing"
+                    ? "está editando"
+                    : u.state === "viewing"
+                    ? "viendo"
+                    : "inactivo";
+                const you =
+                  user && Number((user as any).id) === u.id ? " (tú)" : "";
+                return (
+                  <div
+                    key={u.id}
+                    className="flex items-center justify-between rounded-lg px-3 py-2 bg-sidebar-accent text-sidebar-accent-foreground"
+                  >
+                    <div className="flex items-center gap-2">
+                      <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center font-medium">
+                        {u.username?.slice(0, 1)?.toUpperCase() ?? "U"}
+                      </div>
+                      <div className="text-sm">
+                        <span className="font-medium">{u.username}{you}</span>{" "}
+                        <span className="text-muted-foreground">— {label}</span>
+                      </div>
+                    </div>
+                    <div className={`w-2.5 h-2.5 rounded-full ${color}`} />
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+        {/* === /Indicador de colaboración === */}
+
         <div className="space-y-3">
           <h3 className="text-sm font-medium text-sidebar-foreground flex items-center gap-2">
             <Box className="size-4" />
@@ -295,6 +384,19 @@ export default function AppSidebar() {
               <FileJson className="size-4" />
               <span className="font-medium">Postman</span>
             </button>
+
+            {/* --- Invitar colaboradores --- */}
+            <button
+              onClick={() => setInviteOpen(true)}
+              disabled={!diagramId || !token}
+              title={!token ? "Inicia sesión para invitar" : "Invitar colaboradores"}
+              className="flex items-center gap-3 px-4 py-3 text-left rounded-xl
+                         bg-indigo-600 text-white hover:bg-indigo-500
+                         disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
+            >
+              <UserPlus2 className="size-4" />
+              <span className="font-medium">Invitar</span>
+            </button>
           </div>
         </div>
 
@@ -307,14 +409,13 @@ export default function AppSidebar() {
         {relationMode && (
           <div className="p-4 bg-accent/50 border border-accent rounded-xl">
             <p className="text-sm text-accent-foreground">
-              <strong>Modo relación activo:</strong> Haz clic en la clase origen y luego en la clase destino para crear
-              una relación.
+              <strong>Modo relación activo:</strong> Haz clic en la clase origen y luego en la clase destino para crear una relación.
             </p>
           </div>
         )}
       </div>
 
-      {/* --- Panel de edición --- */}
+      {/* Panel edición */}
       {selectedRelationId ? (
         <div className="border-t border-sidebar-border bg-sidebar-accent/30">
           <div className="p-6">
@@ -438,6 +539,17 @@ export default function AppSidebar() {
         </div>
       ) : (
         <div className="p-6 text-sm opacity-80">Selecciona un elemento para editar…</div>
+      )}
+
+      {/* Modal de invitaciones */}
+      {inviteOpen && !Number.isNaN(diagramIdNum) && token && (
+        <InviteDialog
+          open={inviteOpen}
+          onOpenChange={setInviteOpen}
+          diagramId={diagramIdNum}
+          apiUrl={apiUrl}
+          jwt={token}
+        />
       )}
     </aside>
   );
