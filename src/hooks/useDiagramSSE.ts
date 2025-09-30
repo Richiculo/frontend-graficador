@@ -16,7 +16,7 @@ export function useDiagramSSE(diagramId?: number) {
   const hbRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   // para usar un snapshot de nodos cuando llegue class.deleted
-  const nodesRef = useRef<ReturnType<typeof useEditor>["nodes"]>([])
+  const nodesRef = useRef<any[]>([])
   nodesRef.current = useEditor().nodes
 
   useEffect(() => {

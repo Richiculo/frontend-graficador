@@ -41,12 +41,12 @@ export default function RelationEditor() {
     }
     setForm({
       kind: (rel.kind as Kind) ?? "ASSOCIATION",
-      label: rel.sourceRole ?? "",
+      label: (rel as any).sourceRole ?? "",
       sourceMult: rel.sourceMult ?? "",
       targetMult: rel.targetMult ?? "",
-      navigableAToB: !!rel.navigableAToB,
-      navigableBToA: !!rel.navigableBToA,
-      associationClassId: rel.associationClassId ?? null,
+      navigableAToB: !!(rel as any).navigableAToB,
+      navigableBToA: !!(rel as any).navigableBToA,
+      associationClassId: (rel as any).associationClassId ?? null,
     });
   }, [rel]);
 
@@ -67,6 +67,10 @@ export default function RelationEditor() {
   async function onSave() {
     if (dId == null || Number.isNaN(dId)) {
       alert("DiagramId no definido");
+      return;
+    }
+    
+    if (!rel || !form) {
       return;
     }
 
@@ -133,6 +137,7 @@ export default function RelationEditor() {
   async function onDelete() {
     if (!confirm("¿Eliminar relación?")) return;
     if (dId == null || Number.isNaN(dId)) return;
+    if (!rel) return;
     try {
       await deleteRelation(dId, rel.id);
       setEdges(edges.filter((e: any) => e.id !== rel.id));

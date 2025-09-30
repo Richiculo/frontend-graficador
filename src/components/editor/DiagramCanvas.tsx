@@ -200,8 +200,8 @@ export default function DiagramCanvas() {
             targetClassId: id,
             sourceMult: (rel as any).sourceMult ?? def.src ?? "",
             targetMult: (rel as any).targetMult ?? def.tgt ?? "",
-            sourceRole: (rel as any).sourceRole ?? null,
-            targetRole: (rel as any).targetRole ?? null,
+            // sourceRole: (rel as any).sourceRole ?? null,
+            // targetRole: (rel as any).targetRole ?? null,
           });
         } catch {
           // noop

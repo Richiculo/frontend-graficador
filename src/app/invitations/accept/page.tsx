@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
+import { Suspense, useEffect, useMemo, useState } from "react"
 import { useSearchParams, useRouter } from "next/navigation"
 import { Loader2 } from "lucide-react"
 import { useAuth } from "@/store/auth"
@@ -9,7 +9,7 @@ import { useAuthGuardEffect } from "@/hooks/useAuthGuard"
 
 type View = "loading" | "ok" | "error" | "mismatch"
 
-export default function AcceptInvitePage() {
+function AcceptInvitePageContent() {
   const search = useSearchParams()
   const token = useMemo(() => search.get("token") ?? "", [search])
   const router = useRouter()
@@ -107,5 +107,20 @@ export default function AcceptInvitePage() {
     <main className="min-h-screen grid place-items-center">
       <p className="text-foreground">Invitación aceptada. Redirigiendo…</p>
     </main>
+  )
+}
+
+export default function AcceptInvitePage() {
+  return (
+    <Suspense fallback={
+      <main className="min-h-screen grid place-items-center">
+        <div className="flex items-center gap-2 text-muted-foreground">
+          <Loader2 className="size-5 animate-spin" />
+          <span>Cargando…</span>
+        </div>
+      </main>
+    }>
+      <AcceptInvitePageContent />
+    </Suspense>
   )
 }

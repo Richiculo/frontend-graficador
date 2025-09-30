@@ -89,7 +89,7 @@ export default function EditorPage({ params }: EditorPageProps) {
         ) : null}
 
         {/* Pasamos el id al canvas */}
-        <DiagramCanvas diagramId={diagramIdStr} />
+        <DiagramCanvas />
       </section>
 
       <aside className="w-80 shrink-0 border-l border-neutral-800 p-4">
